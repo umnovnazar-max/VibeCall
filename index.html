@@ -43,7 +43,7 @@
       overflow-x: hidden;
     }
 
-    /* Фоновые милые сверкающие элементы */
+    /* Фоновые декоративные звездочки */
     body::before {
       content: '✦  ★  ✦   ★';
       position: fixed;
@@ -56,7 +56,7 @@
       z-index: 0;
     }
 
-    /* Декоративные ушки для карточек/панелей */
+    /* Декоративные ушки для блоков */
     .ear-container {
       position: relative;
     }
@@ -170,7 +170,6 @@
       z-index: 1;
     }
 
-    /* Общий стиль панелей */
     .panel-box {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -179,7 +178,7 @@
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 15px rgba(236, 72, 153, 0.05);
     }
 
-    /* Левая панель: Предпросмотр */
+    /* Левая панель */
     .panel-preview {
       padding: 16px;
       display: flex;
@@ -292,7 +291,7 @@
       box-shadow: 0 6px 16px rgba(236, 72, 153, 0.4);
     }
 
-    /* Центральная панель: Рабочая зона */
+    /* Центральная панель */
     .panel-main-workspace {
       display: flex;
       flex-direction: column;
@@ -351,7 +350,7 @@
       border-color: var(--pink-accent);
     }
 
-    /* Правая панель: Детализированный кавайный чат */
+    /* Правая панель (Чат) */
     .panel-chat {
       display: flex;
       flex-direction: column;
@@ -388,7 +387,6 @@
       gap: 12px;
     }
 
-    /* Стиль сообщений с хвостиками и микро-деталями */
     .chat-msg-wrapper {
       display: flex;
       flex-direction: column;
@@ -451,7 +449,7 @@
       background: rgba(0, 0, 0, 0.2);
     }
 
-    /* Модальное окно входящего вызова */
+    /* Модалка входящего звонка */
     .incoming-modal {
       position: fixed;
       top: 0;
@@ -521,7 +519,7 @@
     .btn-decline { background: var(--danger); }
     .btn-decline:hover { background: var(--danger-hover); }
 
-    /* Полноэкранный режим звонка */
+    /* Полноэкранный звонок */
     .call-overlay {
       position: fixed;
       top: 0;
@@ -556,6 +554,7 @@
       border: 4px solid var(--pink-accent);
       position: absolute;
       box-shadow: 0 0 35px var(--pink-glow);
+      display: none;
     }
 
     .local-video-pip {
@@ -635,10 +634,10 @@
     </div>
   </header>
 
-  <!-- Главный макет из 3 панелей -->
+  <!-- Главный макет -->
   <div class="app-workspace">
     
-    <!-- 1. Левая панель с декоративными ушками -->
+    <!-- 1. Левая панель с ушками -->
     <div class="panel-box panel-preview ear-container">
       <div class="panel-title"><span>📸</span> Моя камера</div>
       <div class="video-preview-box">
@@ -657,7 +656,7 @@
       </div>
     </div>
 
-    <!-- 2. Центральная панель (Рабочая зона) с ушками -->
+    <!-- 2. Центральная панель с ушками -->
     <div class="panel-box panel-main-workspace ear-container">
       <div class="workspace-tabs">
         <button class="tab-btn active" onclick="switchTab('notes')">✎ Заметки</button>
@@ -673,7 +672,7 @@
       </div>
     </div>
 
-    <!-- 3. Правая панель (Чат) с ушками -->
+    <!-- 3. Правая панель с ушками -->
     <div class="panel-box panel-chat ear-container">
       <div class="chat-header">
         <span>💬 Чат комнаты</span>
@@ -714,6 +713,7 @@
   <div class="call-overlay" id="callOverlay">
     <div class="remote-video-wrapper">
       <img id="fullRemoteAvatar" class="remote-avatar-big" alt="Remote Avatar">
+      <!-- ВАЖНО: У видео убран muted, добавлен playsinline -->
       <video id="fullRemoteVideo" autoplay playsinline></video>
     </div>
 
@@ -784,13 +784,20 @@
       return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     }
 
+    // Запросить локальные видео и аудио
     async function initMedia() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         previewVideo.srcObject = localStream;
         fullLocalVideo.srcObject = localStream;
       } catch (err) {
-        alert('Разрешите доступ к камере/микрофону: ' + err.message);
+        console.warn('Не удалось получить медиаустройства:', err);
+        // Резервный вариант, если у пользователя нет камеры
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        } catch (e) {
+          console.error('Микрофон также недоступен:', e);
+        }
       }
     }
 
@@ -799,7 +806,8 @@
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
           ]
         }
       });
@@ -897,6 +905,7 @@
       });
     });
 
+    // Начать звонок
     startCallBtn.addEventListener('click', () => {
       const targetId = targetIdInput.value.trim();
       if (!targetId) return alert('Введите ID друга!');
@@ -913,6 +922,7 @@
       setupCallEvents(call);
     });
 
+    // Принять входящий звонок
     acceptCallBtn.addEventListener('click', () => {
       incomingModal.style.display = 'none';
       if (incomingCallObject) {
@@ -931,14 +941,22 @@
       }
     });
 
+    // ИСПРАВЛЕННАЯ ОБРАБОТКА МЕДИА-ПОТОКА
     function setupCallEvents(call) {
       activeCall = call;
 
       call.on('stream', (remoteStream) => {
         fullRemoteVideo.srcObject = remoteStream;
+        // Принудительно запускаем видео при получении потока
+        fullRemoteVideo.play().catch(e => console.warn('Ошибка воспроизведения видео друга:', e));
       });
 
       call.on('close', () => {
+        closeCallUI();
+      });
+
+      call.on('error', (err) => {
+        console.error('Ошибка звонка:', err);
         closeCallUI();
       });
     }
